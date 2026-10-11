@@ -1,0 +1,3 @@
+include:
+  - ${MIS_INFRA_MONGO_PATH:?MIS_INFRA_MONGO_PATH required}/compose.yml
+  - ./compose.yml

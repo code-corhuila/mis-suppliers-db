@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:mongodb="http://www.liquibase.org/xml/ns/mongodb"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.31.xsd http://www.liquibase.org/xml/ns/mongodb http://www.liquibase.org/xml/ns/mongodb/liquibase-mongodb-latest.xsd">
+  <changeSet id="suppliers-collections-001" author="julian1614" labels="HU-PRV-001">
+    <mongodb:createCollection collectionName="suppliers">
+      <mongodb:options><![CDATA[{
+        "validationLevel":"strict", "validationAction":"error",
+        "validator":{"$jsonSchema":{
+          "bsonType":"object", "additionalProperties":false,
+          "required":["_id","documentNumber","name","phone","email","address","active","createdAt","createdBy"],
+          "properties":{
+            "_id":{"bsonType":"string","pattern":"^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"},
+            "documentNumber":{"bsonType":"string","minLength":1,"maxLength":40,"pattern":"^[A-Z0-9-]+$"},
+            "name":{"bsonType":"string","minLength":1,"maxLength":160},
+            "phone":{"bsonType":["string","null"],"minLength":1,"maxLength":30},
+            "email":{"bsonType":["string","null"],"minLength":1,"maxLength":254},
+            "address":{"bsonType":["string","null"],"minLength":1,"maxLength":240},
+            "active":{"bsonType":"bool"}, "createdAt":{"bsonType":"date"},
+            "createdBy":{"bsonType":"string","pattern":"^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"}
+          }
+        }}
+      }]]></mongodb:options>
+    </mongodb:createCollection>
+    <mongodb:createCollection collectionName="creation_requests">
+      <mongodb:options><![CDATA[{
+        "validationLevel":"strict", "validationAction":"error",
+        "validator":{"$jsonSchema":{
+          "bsonType":"object", "additionalProperties":false,
+          "required":["_id","actor","operation","requestKey","requestHash","supplierId","response","createdAt"],
+          "properties":{
+            "_id":{"bsonType":"string"}, "actor":{"bsonType":"string"},
+            "operation":{"enum":["createSupplier"]},
+            "requestKey":{"bsonType":"string","minLength":8,"maxLength":128,"pattern":"^[A-Za-z0-9._:-]+$"},
+            "requestHash":{"bsonType":"string","pattern":"^[a-f0-9]{64}$"},
+            "supplierId":{"bsonType":"string"}, "response":{"bsonType":"object"},
+            "createdAt":{"bsonType":"date"}
+          }
+        }}
+      }]]></mongodb:options>
+    </mongodb:createCollection>
+    <rollback>
+      <mongodb:dropCollection collectionName="creation_requests"/>
+      <mongodb:dropCollection collectionName="suppliers"/>
+    </rollback>
+  </changeSet>
+  <changeSet id="suppliers-indexes-001" author="julian1614">
+    <mongodb:createIndex collectionName="suppliers">
+      <mongodb:keys>{"documentNumber":1}</mongodb:keys>
+      <mongodb:options>{"unique":true,"name":"uq_document"}</mongodb:options>
+    </mongodb:createIndex>
+    <mongodb:createIndex collectionName="suppliers">
+      <mongodb:keys>{"createdAt":-1,"_id":-1}</mongodb:keys>
+      <mongodb:options>{"name":"ix_page"}</mongodb:options>
+    </mongodb:createIndex>
+    <mongodb:createIndex collectionName="creation_requests">
+      <mongodb:keys>{"actor":1,"operation":1,"requestKey":1}</mongodb:keys>
+      <mongodb:options>{"unique":true,"name":"uq_intention"}</mongodb:options>
+    </mongodb:createIndex>
+    <rollback>
+      <mongodb:dropIndex collectionName="creation_requests"><mongodb:keys>{"actor":1,"operation":1,"requestKey":1}</mongodb:keys></mongodb:dropIndex>
+      <mongodb:dropIndex collectionName="suppliers"><mongodb:keys>{"createdAt":-1,"_id":-1}</mongodb:keys></mongodb:dropIndex>
+      <mongodb:dropIndex collectionName="suppliers"><mongodb:keys>{"documentNumber":1}</mongodb:keys></mongodb:dropIndex>
+    </rollback>
+  </changeSet>
+  <include file="receipts.xml" relativeToChangelogFile="true"/>
+</databaseChangeLog>
