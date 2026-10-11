@@ -1,0 +1,7 @@
+.git
+env
+secrets
+target
+
+.env
+.env.*
