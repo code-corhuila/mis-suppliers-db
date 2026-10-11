@@ -1,0 +1,32 @@
+name: Suppliers migration checks
+on:
+  pull_request:
+    branches: [develop, qa]
+permissions:
+  contents: read
+concurrency:
+  group: suppliers-db-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check changelog XML and embedded JSON
+        run: |
+          python3 - <<'PY'
+          import json, xml.etree.ElementTree as ET
+          for path in ('changelog/master.xml', 'changelog/receipts.xml'):
+              for node in ET.parse(path).iter():
+                  if node.tag.rsplit('}', 1)[-1] in ('keys', 'options'):
+                      json.loads(node.text)
+          PY
+      - name: Check PowerShell syntax
+        shell: pwsh
+        run: |
+          $tokens=$null; $errors=$null
+          [void][System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PWD 'tests/Test-Migrations.ps1'),[ref]$tokens,[ref]$errors)
+          if($errors.Count) { throw ($errors | Out-String) }
+      - name: Build migration runtime
+        run: docker build -f deploy/Dockerfile -t suppliers-migration-check .

@@ -1,0 +1,31 @@
+services:
+  suppliers-db-migrate:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    working_dir: /liquibase/changelog
+    environment:
+      LIQUIBASE_COMMAND_URL: mongodb://mongo:27017/suppliers?authSource=admin&replicaSet=rs0
+      LIQUIBASE_COMMAND_USERNAME: ${MONGO_ADMIN_USER:?MONGO_ADMIN_USER required}
+      LIQUIBASE_COMMAND_PASSWORD: ${MONGO_ADMIN_PASSWORD:?MONGO_ADMIN_PASSWORD required}
+    command: ["--changelog-file=changelog/master.xml", "--database-changelog-table-name=databasechangelog_suppliers", "--database-changelog-lock-table-name=databasechangeloglock_suppliers", "update"]
+    volumes:
+      - ..:/liquibase/changelog:ro
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks: [platform]
+    restart: "no"
+  suppliers-db-check:
+    image: ${MONGO_IMAGE:?MONGO_IMAGE required}
+    entrypoint: ["mongosh", "--quiet", "--nodb", "/checks/check.js"]
+    environment:
+      MONGO_SUPPLIERS_PASSWORD: ${MONGO_SUPPLIERS_PASSWORD:?MONGO_SUPPLIERS_PASSWORD required}
+    volumes:
+      - ../check.js:/checks/check.js:ro
+    depends_on:
+      mongo:
+        condition: service_healthy
+    profiles: [checks]
+    networks: [platform]
+    restart: "no"
