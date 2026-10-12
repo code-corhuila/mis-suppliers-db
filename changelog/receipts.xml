@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:mongodb="http://www.liquibase.org/xml/ns/mongodb"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.31.xsd http://www.liquibase.org/xml/ns/mongodb http://www.liquibase.org/xml/ns/mongodb/liquibase-mongodb-latest.xsd">
+  <changeSet id="suppliers-receipts-001" author="julian1614" labels="HU-WFL-001">
+    <mongodb:createCollection collectionName="receipts">
+      <mongodb:options><![CDATA[{
+        "validationLevel":"strict","validationAction":"error",
+        "validator":{"$and":[{"$jsonSchema":{
+          "bsonType":"object","additionalProperties":false,
+          "required":["_id","supplierId","medicationId","reference","lotNumber","expiresOn","quantity","workflowId","initiatedBy","status","createdBy","createdAt","changedBy","changedAt","traceId"],
+          "properties":{
+            "_id":{"bsonType":"string","pattern":"^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"},
+            "supplierId":{"bsonType":"string","pattern":"^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"},
+            "medicationId":{"bsonType":"string","pattern":"^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"},
+            "workflowId":{"bsonType":"string","pattern":"^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"},
+            "initiatedBy":{"bsonType":"string","pattern":"^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"},
+            "reference":{"bsonType":"string","pattern":"^[A-Z0-9-]{1,40}$"},
+            "lotNumber":{"bsonType":"string","pattern":"^[A-Z0-9-]{1,40}$"},
+            "expiresOn":{"bsonType":"string","pattern":"^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+            "quantity":{"bsonType":"int","minimum":1,"maximum":1000000},
+            "status":{"enum":["PENDING","CONFIRMED","VOIDED"]},
+            "createdBy":{"bsonType":"string","pattern":"^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"},
+            "createdAt":{"bsonType":"date"},"changedAt":{"bsonType":["date","null"]},
+            "changedBy":{"bsonType":["string","null"],"pattern":"^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"},
+            "traceId":{"bsonType":"string","pattern":"^[A-Za-z0-9._:-]{1,128}$"}
+          }
+        }},{"$or":[{"status":"PENDING","changedBy":null,"changedAt":null},
+          {"status":{"$in":["CONFIRMED","VOIDED"]},"changedBy":{"$type":"string"},"changedAt":{"$type":"date"}}]}]}
+      }]]></mongodb:options>
+    </mongodb:createCollection>
+    <mongodb:createCollection collectionName="receipt_requests">
+      <mongodb:options><![CDATA[{
+        "validationLevel":"strict","validationAction":"error",
+        "validator":{"$jsonSchema":{
+          "bsonType":"object","additionalProperties":false,
+          "required":["_id","actor","operation","requestKey","requestHash","receiptId","response","createdAt"],
+          "properties":{
+            "_id":{"bsonType":"string","pattern":"^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"},
+            "actor":{"bsonType":"string","pattern":"^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"},
+            "receiptId":{"bsonType":"string","pattern":"^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"},
+            "operation":{"enum":["prepareReceipt","confirmReceipt","voidReceipt"]},
+            "requestKey":{"bsonType":"string","pattern":"^[A-Za-z0-9._:-]{8,128}$"},
+            "requestHash":{"bsonType":"string","pattern":"^[a-f0-9]{64}$"},
+            "response":{"bsonType":"object"},"createdAt":{"bsonType":"date"}
+          }
+        }}
+      }]]></mongodb:options>
+    </mongodb:createCollection>
+    <mongodb:createIndex collectionName="receipts">
+      <mongodb:keys>{"supplierId":1,"reference":1}</mongodb:keys>
+      <mongodb:options>{"unique":true,"name":"uq_reference"}</mongodb:options>
+    </mongodb:createIndex>
+    <mongodb:createIndex collectionName="receipts">
+      <mongodb:keys>{"workflowId":1}</mongodb:keys>
+      <mongodb:options>{"unique":true,"name":"uq_workflow"}</mongodb:options>
+    </mongodb:createIndex>
+    <mongodb:createIndex collectionName="receipt_requests">
+      <mongodb:keys>{"actor":1,"operation":1,"requestKey":1}</mongodb:keys>
+      <mongodb:options>{"unique":true,"name":"uq_receipt_intention"}</mongodb:options>
+    </mongodb:createIndex>
+    <rollback>
+      <mongodb:dropCollection collectionName="receipt_requests"/>
+      <mongodb:dropCollection collectionName="receipts"/>
+    </rollback>
+  </changeSet>
+</databaseChangeLog>
